@@ -58,14 +58,7 @@ def insert_centroids_in_the_the_graph(G, centroids):
         print(f'> Inserting centroid {c[0]} in the graph...')
         G.add_node(c[0], pos=(c[1], c[2]), type="Centroid")
 
-
-        count = 1
         for n in G.nodes:
-            if n == c[0]:
-                continue
-            if count > 15: 
-                break
-            count += 1
             dist = math.sqrt(((G.nodes[n]["pos"][0] - c[1]) * DEGREE_TO_METER) ** 2 + ((G.nodes[n]["pos"][1] - c[2]) * DEGREE_TO_METER) ** 2)
             G.add_edge(c[0], n, weight=dist, length=0, routes=[])
          
