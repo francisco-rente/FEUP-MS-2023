@@ -4,9 +4,6 @@ import pickle
 import math
 
 
-DEGREE_TO_METER = 111139
-
-
 def add_routes(graph, feed, weight_prop=0.05, shapes=False):
     routes = feed.routes['route_id']
 
@@ -39,16 +36,16 @@ def add_trip(graph, feed, pos, route, weight_prop, trip_id, shape_id=None):
         shapes_sequence = shapes_raw['shape_pt_sequence'].values
         shapes = []
 
-        for i in range(len(shapes_raw) - 1):
+        for i in range(len(shapes_raw) - 1):    # TODO: Optimize by saving to_shape for next iteration
             from_shape = shapes_raw[shapes_raw['shape_pt_sequence'] == shapes_sequence[i]].iloc[0]
             to_shape = shapes_raw[shapes_raw['shape_pt_sequence'] == shapes_sequence[i + 1]].iloc[0]
             from_lon, from_lat = from_shape['shape_pt_lon'], from_shape['shape_pt_lat']
             to_lon, to_lat = to_shape['shape_pt_lon'], to_shape['shape_pt_lat']
-            distance = math.sqrt(((from_lon - to_lon) * DEGREE_TO_METER) ** 2 + ((from_lat - to_lat) * DEGREE_TO_METER) ** 2)
+            distance = calculate_distance_degree((from_lon, from_lat), (to_lon, to_lat))
             if i == 0:
                 shapes.append((from_lon, from_lat, 0))
             shapes.append((to_lon, to_lat, distance))
-        
+            
     stop_times = feed.stop_times[feed.stop_times['trip_id'] == trip_id]
     stop_sequence = stop_times['stop_sequence'].values
     
@@ -60,27 +57,41 @@ def add_trip(graph, feed, pos, route, weight_prop, trip_id, shape_id=None):
 
         if shape_id:
             if i == 0:
-                from_shape_dist = [math.dist((shapes[i][0], shapes[i][1]), (from_lon, from_lat)) + math.dist((shapes[i+1][0], shapes[i+1][1]), (from_lon, from_lat)) - math.dist((shapes[i][0], shapes[i][1]), (shapes[i+1][0], shapes[i+1][1])) for i in range(len(shapes) - 1)]
+                from_shape_dist = [math.dist((shapes[i][0], shapes[i][1]), (from_lon, from_lat)) for i in range(len(shapes))]
                 from_shape_index = from_shape_dist.index(min(from_shape_dist))
-                if math.dist((shapes[from_shape_index][0], shapes[from_shape_index][1]), (from_lon, from_lat)) > math.dist((shapes[from_shape_index + 1][0], shapes[from_shape_index + 1][1]), (from_lon, from_lat)): from_shape_index = from_shape_index + 1
 
-            to_shape_dist = [math.dist((shapes[i][0], shapes[i][1]), (to_lon, to_lat)) + math.dist((shapes[i+1][0], shapes[i+1][1]), (to_lon, to_lat)) - math.dist((shapes[i][0], shapes[i][1]), (shapes[i+1][0], shapes[i+1][1])) for i in range(len(shapes[from_shape_index + 1]) - 1)]
-            to_shape_index = to_shape_dist.index(min(to_shape_dist)) + from_shape_index + 1
-            if math.dist((shapes[to_shape_index][0], shapes[to_shape_index][1]), (to_lon, to_lat)) > math.dist((shapes[to_shape_index + 1][0], shapes[to_shape_index + 1][1]), (to_lon, to_lat)): to_shape_index = to_shape_index + 1
+            to_shape_dist = [math.dist((shapes[i][0], shapes[i][1]), (to_lon, to_lat)) for i in range(from_shape_index, len(shapes))]
+            to_shape_index = to_shape_dist.index(min(to_shape_dist)) + from_shape_index
 
-            distance = sum([shapes[i][2] for i in range(from_shape_index + 1, to_shape_index + 1)]) + math.dist((shapes[from_shape_index][0], shapes[from_shape_index][1]), (from_lon, from_lat)) + math.dist((shapes[to_shape_index][0], shapes[to_shape_index][1]), (to_lon, to_lat))
+            distance = sum([shapes[i][2] for i in range(from_shape_index + 1, to_shape_index + 1)]) + calculate_distance_degree((shapes[from_shape_index][0], shapes[from_shape_index][1]), (from_lon, from_lat)) + calculate_distance_degree((shapes[to_shape_index][0], shapes[to_shape_index][1]), (to_lon, to_lat))
 
             from_shape_index = to_shape_index
         else:
-            distance = math.sqrt(((from_lon - to_lon) * DEGREE_TO_METER) ** 2 + ((from_lat - to_lat) * DEGREE_TO_METER) ** 2)
+            distance = calculate_distance_degree((from_lon, from_lat), (to_lon, to_lat))
         
         if from_stop not in graph.nodes:
             graph.add_node(from_stop, pos=(from_lon, from_lat))
+
         if to_stop not in graph.nodes:
             graph.add_node(to_stop, pos=(to_lon, to_lat))
+
+        # NOTE: There are pairs of stops shared through multiple routes
         edge_routes = graph.get_edge_data(from_stop, to_stop, {}).get('routes', [])
         edge_routes.append(route)
-        graph.add_edge(from_stop, to_stop, weight=distance*weight_prop, length=distance, debug_length=math.sqrt(((from_lon - to_lon) * DEGREE_TO_METER) ** 2 + ((from_lat - to_lat) * DEGREE_TO_METER) ** 2), routes=edge_routes)
+
+        # NOTE: As shapes from different shared pairs of stops can varie, their distance varies to, we accept the min distance
+        if graph.has_edge(from_stop, to_stop):
+            graph_distance = graph.get_edge_data(from_stop, to_stop)['length']
+            distance = min(graph_distance, distance)
+
+        # NOTE: For DEBUG purposes you can add debug_distance=calculate_distance_degree((from_lon, from_lat), (to_lon, to_lat)) to the edge attributes
+        graph.add_edge(from_stop, to_stop, weight=distance*weight_prop, length=distance, routes=edge_routes)
+
+
+DEGREE_TO_METER = 111139
+
+def calculate_distance_degree(from_pos, to_pos):
+    return math.sqrt(sum(((px - qx) * DEGREE_TO_METER) ** 2 for px, qx in zip(from_pos, to_pos)))
 
 
 def main():
