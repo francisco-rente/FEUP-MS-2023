@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import networkx as nx
+from concurrent.futures import ThreadPoolExecutor
 import geopandas as gpd
 
 SECTIONS_GPKG = "../datasets/BGRI2021_1312.gpkg"
@@ -70,50 +71,38 @@ def isCentroid(node):
 def extract_centroids_from_graph(G):
     return list(filter(lambda x: 'type' in G.nodes[x] and G.nodes[x]['type'] == 'Centroid', G.nodes()))
 
+distance_foo = lambda le : le if le != np.inf else -1
 
-def compute_shortest_paths(G, centroids):
+def get_shortest_path_between_centroid_and_centroids(G, c1, centroid):
+    return [
+        ( c1,
+          c2,
+         distance_foo(nx.dijkstra_path_length(G, c1, c2, weight='weight'))
+         )
+        for c2 in centroid
+        if c1 != c2
+    ]
 
-    if os.path.exists('paths.gpickle'):
-        with open('paths.gpickle', 'rb') as f:
-            return pickle.load(f)
-
-    print(f'> Computing shortest paths between {len(centroids)} centroids...')
-    paths = dict(nx.all_pairs_dijkstra_path_length(G, weight='weight')) # fastest I've found, use nx method only 
-    print(f'> Shortest paths computed!')
-
-    with open('paths.gpickle', 'wb') as f:
-        pickle.dump(paths, f)
-
-    return paths
-    
-
-def create_adjacency_matrix(paths, centroids):
-
+def create_adjacency_matrix(G, centroids):
     if os.path.exists('shortest_path.csv'):
         return pd.read_csv('shortest_path.csv')
 
-
     shortest_path_df = pd.DataFrame(columns=['from', 'to', 'distance'])
-
-    matched_centroids = len(set(paths.keys()).intersection(set(centroids)))
-    print(f'> Matched {matched_centroids} centroids out of {len(centroids)}')
-
-    centroids_path = dict(filter(lambda p: p[0] in centroids, paths.items()))
-    print(f'> Length of centroids_path: {len(centroids_path)}')
-
-    distance_foo = lambda n, ps, c: ps[c] if c in ps \
-                                            else 0 if n == c \
-                                            else -1
-
     print(f'> Creating adjacency matrix...')
-    shortest_path_arr = []
-    for node, paths in centroids_path.items():
-        for c in centroids:
-            shortest_path_arr.append((node, c, distance_foo(node, paths, c)))
-    
-    shortest_path_df = pd.DataFrame(shortest_path_arr, columns=['from', 'to', 'distance'])
-    return shortest_path_df
 
+    shortest_path_arr = []
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        for c1 in centroids:
+            shortest_path_arr += executor.submit(get_shortest_path_between_centroid_and_centroids, G, c1, centroids).result()
+
+    print(f'> Saving shortest paths to csv file...')
+    shortest_path_df = pd.DataFrame(shortest_path_arr, columns=['from', 'to', 'distance'])
+
+    with open('shortest_path.csv', 'wb') as f:
+        pickle.dump(shortest_path_df, f)
+
+    return shortest_path_df
+    
 
 def metrics(matrix):
     # count number of -1
@@ -131,8 +120,7 @@ def main():
             G = pickle.load(f)
     
     centroids = extract_centroids_from_graph(G) 
-    shortest_path_df = compute_shortest_paths(G, centroids)
-    matrix = create_adjacency_matrix(shortest_path_df, centroids)
+    matrix = create_adjacency_matrix(G, centroids)
     metrics(matrix) 
     
 
