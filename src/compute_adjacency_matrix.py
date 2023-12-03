@@ -72,16 +72,9 @@ def extract_centroids_from_graph(G):
     return list(filter(lambda x: 'type' in G.nodes[x] and G.nodes[x]['type'] == 'Centroid', G.nodes()))
 
 distance_foo = lambda le : le if le != np.inf else -1
-
-def get_shortest_path_between_centroid_and_centroids(G, c1, centroid):
-    return [
-        ( c1,
-          c2,
-         distance_foo(nx.dijkstra_path_length(G, c1, c2, weight='weight'))
-         )
-        for c2 in centroid
-        if c1 != c2
-    ]
+def shortest_path(G, c1, c2):
+     return (c1, c2, distance_foo(nx.dijkstra_path_length(G, c1, c2, weight='weight'))) if c1 != c2 else None
+    
 
 def create_adjacency_matrix(G, centroids):
     if os.path.exists('shortest_path.csv'):
@@ -90,10 +83,18 @@ def create_adjacency_matrix(G, centroids):
     shortest_path_df = pd.DataFrame(columns=['from', 'to', 'distance'])
     print(f'> Creating adjacency matrix...')
 
+    # TODO: use cuGraph
+    # TODO: save current progress to csv file
+
     shortest_path_arr = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor() as executor:
+        futures = []
         for c1 in centroids:
-            shortest_path_arr += executor.submit(get_shortest_path_between_centroid_and_centroids, G, c1, centroids).result()
+            for c2 in centroids:
+                if c1 != c2:
+                    futures.append(executor.submit(shortest_path, G, c1, c2))
+        
+        shortest_path_arr = [f.result() for f in futures if f.result() is not None]    
 
     print(f'> Saving shortest paths to csv file...')
     shortest_path_df = pd.DataFrame(shortest_path_arr, columns=['from', 'to', 'distance'])
