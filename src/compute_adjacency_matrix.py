@@ -15,7 +15,7 @@ def extract_centroids_from_graph(G):
 
 
 def shortest_path(G, c1, c2):
-    d = (c1, c2, nx.dijkstra_path_length(G, c1, c2, weight='weight')) if c1 != c2 else [c1, c2, 0]
+    d = (c1, c2, nx.dijkstra_path_length(G, c1, c2, weight='weight')) if c1 != c2 else (c1, c2, 0)
     print(f'> Distance: {c1} -> {c2} = {d}')
     return d
 
@@ -33,6 +33,7 @@ def create_adjacency_matrix(G, centroids):
         for c1 in centroids:
             for c2 in centroids:
                 futures.append(executor.submit(shortest_path, G, c1, c2))
+
         print(f'> Waiting for results...')
         for future in futures:
             if future.result() is not None:
