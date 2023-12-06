@@ -101,7 +101,6 @@ def load_centroids(path):
     for _, r in df.iterrows():
         lat, lon = r['centroid'].y, r['centroid'].x
         region_id = str(r['OBJECTID'])
-        print(f'> Adding section: {region_id}')
         centroids.append((region_id, lat, lon))
 
     return centroids
@@ -109,12 +108,13 @@ def load_centroids(path):
 
 def add_centroids(G, centroids):    
     for c in centroids:
+        print(f'> Adding section: {c[0]}')
         G.add_node(c[0], pos=(c[1], c[2]), type='centroid')
         for n in G.nodes:
             if n != c[0]: 
-                dist = calculate_distance_degree((c[1], c[2]), G.nodes[n]['pos'])
-                G.add_edge(c[0], n, weight=dist, length=dist, routes=[])
-                G.add_edge(n, c[0], weight=dist, length=dist, routes=[])
+                distance = calculate_distance_degree((c[1], c[2]), G.nodes[n]['pos'])
+                G.add_edge(c[0], n, weight=distance, distance=distance)
+                G.add_edge(n, c[0], weight=distance, distance=distance)
 
 
 def calculate_distance_degree(from_pos, to_pos):
