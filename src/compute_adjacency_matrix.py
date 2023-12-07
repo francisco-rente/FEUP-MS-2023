@@ -70,7 +70,7 @@ def main():
     matrix = create_adjacency_matrix(G, centroids, debug=True)
 
     print("> Saving shortest paths to .csv file")
-    matrix.to_csv('shortest_path_v2.csv', index=False)
+    matrix.to_csv('shortest_path.csv', index=False)
 
 
 if __name__ == '__main__':
