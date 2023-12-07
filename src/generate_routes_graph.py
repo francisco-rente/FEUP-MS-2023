@@ -110,11 +110,14 @@ def add_centroids(G, centroids):
     for c in centroids:
         print(f'> Adding section: {c[0]}')
         G.add_node(c[0], pos=(c[1], c[2]), type='centroid')
-        for n in G.nodes:
-            if n != c[0]: 
-                distance = calculate_distance_degree((c[1], c[2]), G.nodes[n]['pos'])
-                G.add_edge(c[0], n, weight=distance, distance=distance)
-                G.add_edge(n, c[0], weight=distance, distance=distance)
+
+
+def connect_nodes_without_edge(G):
+    for x in G.nodes:
+        for y in G.nodes:
+            if x != y and not G.has_edge(x, y):
+                distance = calculate_distance_degree(G.nodes[x]['pos'], G.nodes[y]['pos'])
+                G.add_edge(x, y, weight=distance, distance=distance)
 
 
 def calculate_distance_degree(from_pos, to_pos):
@@ -138,6 +141,9 @@ def main():
     add_routes(G, mdp_feed, weight_prop=0.01)
     print('################# SECTIONS #################')
     add_centroids(G, sections)
+
+    print('> Connecting all nodes without connecting edges with weight=distance')
+    connect_nodes_without_edge(G)
 
     # Save graph object to file 
     with open('graph.gpickle', 'wb') as f:
