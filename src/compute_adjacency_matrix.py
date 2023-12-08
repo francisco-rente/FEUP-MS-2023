@@ -1,10 +1,10 @@
 import pickle
 import os
-import pandas as pd
 import networkx as nx
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
 from utils import timed
+import sys
 
 
 @timed(__debug__)
@@ -34,18 +34,17 @@ def shortest_astar_path(G, c1, c2):
     return (c1, c2, '-'.join(p), str(d))
 
 
-def create_adjacency_matrix_file(G, centroids, file_path, num_paths=None):
+def create_adjacency_matrix_file(G, sources, targets, file_path, num_paths=None):
     with ThreadPoolExecutor() as executor:      # NOTE: It will default to the number of processors on the machine, multiplied by 5
 
         if num_paths:
             print(f'> Submitting {num_paths} path(s) calculation(s)')
         else:
-            num_centroids = len(centroids)
-            print(f'> Submitting {num_centroids * num_centroids} path(s) calculation(s)')
+            print(f'> Submitting {len(sources) * len(targets)} path(s) calculation(s)')
 
         futures = []
-        for c1 in centroids:
-            for c2 in centroids:
+        for c1 in sources:
+            for c2 in targets:
                 futures.append(executor.submit(shortest_astar_path, G, c1, c2))
                 if num_paths and len(futures) >= num_paths: break
             if num_paths: break
@@ -54,10 +53,10 @@ def create_adjacency_matrix_file(G, centroids, file_path, num_paths=None):
         completed = 0
         print(f'> Waiting for {waiting} results')
         with open(file_path, 'w') as f:
-            f.write('id,from,to,path,distance\n')
+            f.write('from,to,path,distance\n')
             for completed_future in as_completed(futures):
                 completed += 1
-                f.write(f'{completed},{",".join(completed_future.result())}\n')     # NOTE: Flush is explicitly called after a newline
+                f.write(f'{",".join(completed_future.result())}\n')     # NOTE: Flush is explicitly called after a newline
                 f.flush()
                 print(f'> Completed: {completed}/{waiting}')
     
@@ -70,7 +69,16 @@ def main():     # NOTE: Run python script with -O flag to disable DEBUG features
     G = read_graph_pickle('graph.gpickle')
     
     centroids = extract_centroids_from_graph(G) 
-    create_adjacency_matrix_file(G, centroids, 'shortest_path.csv', num_paths=20 if __debug__ else None)
+
+    num_groups = int(sys.argv[1])
+    group_size = len(centroids) // num_groups
+    group_id = int(sys.argv[2]) - 1
+
+    start_idx = group_id * group_size
+    end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else len(centroids)
+    group_centroids = centroids[start_idx:end_idx]
+
+    create_adjacency_matrix_file(G, group_centroids, centroids, f'shortest_path_group_{group_id + 1}.csv', num_paths=20 if __debug__ else None)
 
 
 if __name__ == '__main__':
