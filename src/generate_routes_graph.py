@@ -7,6 +7,7 @@ import geopandas as gpd
 
 DEGREE_TO_METER = 111139
 SECTIONS_GPKG = '../datasets/BGRI2021_1312.gpkg'
+MAX_WALKING_DISTANCE = 2000     # NOTE: In m
 
 
 def add_routes(graph, feed, weight_prop=0.05, shapes=False):
@@ -112,12 +113,13 @@ def add_centroids(G, centroids):
         G.add_node(c[0], pos=(c[1], c[2]), type='centroid')
 
 
-def connect_nodes_without_edge(G):
+def connect_nodes_without_edge(G, max_walking_distance=1e9):
     for x in G.nodes:
         for y in G.nodes:
             if x != y and not G.has_edge(x, y):
                 distance = calculate_distance_degree(G.nodes[x]['pos'], G.nodes[y]['pos'])
-                G.add_edge(x, y, weight=distance, distance=distance)
+                if distance < max_walking_distance:
+                    G.add_edge(x, y, weight=distance, distance=distance)
 
 
 def calculate_distance_degree(from_pos, to_pos):
@@ -142,8 +144,13 @@ def main():
     print('################# SECTIONS #################')
     add_centroids(G, sections)
 
-    print('> Connecting all nodes without connecting edges with weight=distance')
-    connect_nodes_without_edge(G)
+    print(f'> Connecting all nodes without connecting edges with weight=distance (max. walking distance is {MAX_WALKING_DISTANCE}m)')
+    connect_nodes_without_edge(G, max_walking_distance=MAX_WALKING_DISTANCE)
+
+    if nx.is_strongly_connected(G):
+        print('> The graph is strongly connected')
+    else:
+        print("> WARNING: The graph isn't strongly connected!")
 
     # Save graph object to file 
     with open('graph.gpickle', 'wb') as f:
