@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
 from utils import timed
 import sys
+import pandas as pd
 
 
 @timed(__debug__)
@@ -35,28 +36,40 @@ def shortest_astar_path(G, c1, c2):
 
 
 def create_adjacency_matrix_file(G, sources, targets, file_path, num_paths=None):
-    with ThreadPoolExecutor() as executor:      # NOTE: It will default to the number of processors on the machine, multiplied by 5
 
+    previous_paths = False
+    if os.path.exists(file_path):
+        previous_paths = True
+        print('> Detected previous file, filtering those already calculated')
+        df = pd.read_csv(file_path, dtype={'from': str, 'to': str})
+        paths_already_calculated = df.groupby('from')['to'].apply(set).to_dict()  # NOTE: Dict with {from: set(all_to)}
+
+    with ThreadPoolExecutor() as executor:      # NOTE: It will default to the number of processors on the machine, multiplied by 5
         if num_paths:
-            print(f'> Submitting {num_paths} path(s) calculation(s)')
+            print(f'> Submitting at most {num_paths} path(s) calculation(s)')
         else:
-            print(f'> Submitting {len(sources) * len(targets)} path(s) calculation(s)')
+            print(f'> Submitting at most {len(sources) * len(targets)} path(s) calculation(s)')
 
         futures = []
         for c1 in sources:
             for c2 in targets:
-                futures.append(executor.submit(shortest_astar_path, G, c1, c2))
+                if previous_paths:
+                    if c2 not in paths_already_calculated.get(c1, set()):
+                        futures.append(executor.submit(shortest_astar_path, G, c1, c2))
+                else:
+                    futures.append(executor.submit(shortest_astar_path, G, c1, c2))
                 if num_paths and len(futures) >= num_paths: break
             if num_paths: break
         
         waiting = len(futures)
         completed = 0
         print(f'> Waiting for {waiting} results')
-        with open(file_path, 'w') as f:
-            f.write('from,to,path,distance\n')
+        with open(file_path, 'a') as f:
+            if not previous_paths:
+                f.write('from,to,path,distance\n')
             for completed_future in as_completed(futures):
                 completed += 1
-                f.write(f'{",".join(completed_future.result())}\n')     # NOTE: Flush is explicitly called after a newline
+                f.write(f'{",".join(completed_future.result())}\n')
                 f.flush()
                 print(f'> Completed: {completed}/{waiting}')
     
