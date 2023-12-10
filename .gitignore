@@ -178,4 +178,5 @@ pyrightconfig.json
 *.gpickle
 .DS_Store
 *.log
-*.csv
+src/*.csv
+debug* 

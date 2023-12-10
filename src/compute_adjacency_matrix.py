@@ -36,34 +36,29 @@ def shortest_astar_path(G, c1, c2):
 
 
 def create_adjacency_matrix_file(G, sources, targets, file_path, num_paths=None):
+    previous_paths = os.path.exists(file_path)
 
-    previous_paths = False
-    if os.path.exists(file_path):
-        previous_paths = True
+    if previous_paths:
         print('> Detected previous file, filtering those already calculated')
         df = pd.read_csv(file_path, dtype={'from': str, 'to': str})
         paths_already_calculated = df.groupby('from')['to'].apply(set).to_dict()  # NOTE: Dict with {from: set(all_to)}
 
     with ThreadPoolExecutor() as executor:      # NOTE: It will default to the number of processors on the machine, multiplied by 5
-        if num_paths:
-            print(f'> Submitting at most {num_paths} path(s) calculation(s)')
-        else:
-            print(f'> Submitting at most {len(sources) * len(targets)} path(s) calculation(s)')
+        num_paths = num_paths or len(sources) * len(targets)
+        print(f'> Submitting at most {num_paths} path(s) calculation(s)')
 
         futures = []
         for c1 in sources:
             for c2 in targets:
-                if previous_paths:
-                    if c2 not in paths_already_calculated.get(c1, set()):
-                        futures.append(executor.submit(shortest_astar_path, G, c1, c2))
-                else:
+                if not (previous_paths and c2 in paths_already_calculated.get(c1, set())):
                     futures.append(executor.submit(shortest_astar_path, G, c1, c2))
-                if num_paths and len(futures) >= num_paths: break
-            if num_paths: break
+                if len(futures) >= num_paths: break
+            if len(futures) >= num_paths: break
         
         waiting = len(futures)
         completed = 0
         print(f'> Waiting for {waiting} results')
+        
         with open(file_path, 'a') as f:
             if not previous_paths:
                 f.write('from,to,path,distance\n')
