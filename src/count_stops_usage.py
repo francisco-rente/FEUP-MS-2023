@@ -6,7 +6,7 @@ SHORTEST_PATHS_PATH = '../results/shortest_paths.csv'
 
 
 def main():
-    if os.path.exists(SHORTEST_PATHS_PATH):
+    if not os.path.exists(SHORTEST_PATHS_PATH):
         print("Results not found, please run compute_adjacency_matrix.py first!")
         exit(1)
 
