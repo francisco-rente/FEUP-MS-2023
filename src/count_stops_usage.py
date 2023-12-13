@@ -14,7 +14,7 @@ def main():
     
     stop_count = {}
     for path in df['path']:
-        for stop in path.split('-'):
+        for stop in path.split('-')[1:-1]:
             stop_count[stop] = stop_count.get(stop, 0) + 1
     
     with open('stops_count.csv', 'w') as f:
