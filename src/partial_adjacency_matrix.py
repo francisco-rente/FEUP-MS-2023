@@ -6,7 +6,7 @@ import math
 from utils import timed
 import sys
 import pandas as pd
-
+import sys
 
 @timed(__debug__)
 def read_graph_pickle(file_path):
@@ -35,26 +35,22 @@ def shortest_astar_path(G, c1, c2):
     return (c1, c2, '-'.join(p), str(d))
 
 
-def create_adjacency_matrix_file(G, sources, targets, file_path, num_paths=None):
+def create_adjacency_matrix_file(G, group_pairs, file_path):
     previous_paths = os.path.exists(file_path)
 
     if previous_paths:
         print('> Detected previous file, filtering those already calculated')
         df = pd.read_csv(file_path, dtype={'from': str, 'to': str})
-        paths_already_calculated = df.groupby('from')['to'].apply(set).to_dict()  # NOTE: Dict with {from: set(all_to)}
-
+        group_pairs = group_pairs[~group_pairs.apply(lambda row: row['to'] in df[df['from'] == row['from']]['to'].values, axis=1)]
+    
     with ThreadPoolExecutor() as executor:      # NOTE: It will default to the number of processors on the machine, multiplied by 5
-        num_paths = num_paths or len(sources) * len(targets)
-        print(f'> Submitting at most {num_paths} path(s) calculation(s)')
+        print(f'> Submitting {len(group_pairs)} path(s) calculation(s)')
 
         futures = []
-        for c1 in sources:
-            for c2 in targets:
-                if not (previous_paths and c2 in paths_already_calculated.get(c1, set())):
-                    futures.append(executor.submit(shortest_astar_path, G, c1, c2))
-                if len(futures) >= num_paths: break
-            if len(futures) >= num_paths: break
-        
+        for _, row in group_pairs.iterrows():
+            c1, c2 = row['from'], row['to']
+            futures.append(executor.submit(shortest_astar_path, G, c1, c2))
+            
         waiting = len(futures)
         completed = 0
         print(f'> Waiting for {waiting} results')
@@ -74,19 +70,28 @@ def main():     # NOTE: Run python script with -O flag to disable DEBUG features
         print("Graph not found, please run generate_routes_graph.py first!")
         exit(1)
     
-    G = read_graph_pickle('graph.gpickle')
-    
-    centroids = extract_centroids_from_graph(G) 
+    if len(sys.argv) != 4: 
+        print("Usage: python src/compute_adjacency_matrix.py <num_groups> <group_id> <stop_id>")
+        exit(1)
 
+    stop_id = sys.argv[3]
     num_groups = int(sys.argv[1])
-    group_size = len(centroids) // num_groups
     group_id = int(sys.argv[2]) - 1
+    G = read_graph_pickle(f'graph_without_{stop_id}.gpickle')
 
+    df = pd.read_csv(f'../results/paths_affected_by_{stop_id}.csv', dtype={'from': str, 'to': str})
+
+    #get all pairs of from and to
+    df = df[['from', 'to']]
+    
+    #separate df in groups 
+    group_size = len(df) // num_groups
+    
     start_idx = group_id * group_size
-    end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else len(centroids)
-    group_centroids = centroids[start_idx:end_idx]
+    end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else len(df)
+    group_pairs = df[start_idx:end_idx]
 
-    create_adjacency_matrix_file(G, group_centroids, centroids, f'shortest_path_group_{group_id + 1}.csv', num_paths=20 if __debug__ else None)
+    create_adjacency_matrix_file(G, group_pairs, f'../results/shortest_path_no_{stop_id}_group_{group_id + 1}.csv')
 
 
 if __name__ == '__main__':
