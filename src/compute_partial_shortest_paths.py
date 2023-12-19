@@ -1,12 +1,12 @@
+import argparse
 import pickle
 import os
 import networkx as nx
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
-from utils import timed
-import sys
+from utils.utils import timed
 import pandas as pd
-import sys
+
 
 @timed(__debug__)
 def read_graph_pickle(file_path):
@@ -66,32 +66,51 @@ def create_adjacency_matrix_file(G, group_pairs, file_path):
     
 
 def main():     # NOTE: Run python script with -O flag to disable DEBUG features (such as timed decorator)
-    if not os.path.exists('graph.gpickle'):
-        print("Graph not found, please run generate_routes_graph.py first!")
+    parser = argparse.ArgumentParser(description='Computes a CSV file with an adjacency matrix of shortest paths and weights from the pairs in the given CSV file.')
+    parser.add_argument('graph_path', type=str, help='PATH to graph file')
+    parser.add_argument('csv_path', type=str, help='PATH to CSV file with pairs of centroids')
+    parser.add_argument('--batch', type=int, nargs=2, metavar=('BATCHES', 'BATCH_NUM'), help='Number of batches and batch number (in this order)')
+    parser.add_argument('output_path', type=str, help='PATH to output file')
+    args = parser.parse_args()
+
+    graph_path = args.graph_path
+    csv_path = args.csv_path
+    output_path = args.output_path
+
+    if args.batch:
+        batches, batch_num = args.batch
+    else:
+        batches, batch_num = (1, 1)
+
+    if not os.path.exists(graph_path):
+        print("Graph not found!")
         exit(1)
-    
-    if len(sys.argv) != 4: 
-        print("Usage: python src/compute_adjacency_matrix.py <num_groups> <group_id> <stop_id>")
+
+    if not os.path.exists(csv_path):
+        print("CSV file not found!")
         exit(1)
 
-    stop_id = sys.argv[3]
-    num_groups = int(sys.argv[1])
-    group_id = int(sys.argv[2]) - 1
-    G = read_graph_pickle(f'graph_without_{stop_id}.gpickle')
+    if batches < batch_num:
+        print("Number of batches must be higher than batch number.")
+        exit(1)
 
-    df = pd.read_csv(f'../results/paths_affected_by_{stop_id}.csv', dtype={'from': str, 'to': str})
+    num_groups = batches
+    group_id = batch_num - 1
+    G = read_graph_pickle(graph_path)   # NOTE: Before f'graph_without_{stop_id}.gpickle'
 
-    #get all pairs of from and to
+    df = pd.read_csv(csv_path, dtype={'from': str, 'to': str})  # NOTE: Before f'../results/paths_affected_by_{stop_id}.csv'
+
+    # Get all pairs of from and to
     df = df[['from', 'to']]
     
-    #separate df in groups 
+    # Separate df in groups 
     group_size = len(df) // num_groups
     
     start_idx = group_id * group_size
     end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else len(df)
     group_pairs = df[start_idx:end_idx]
 
-    create_adjacency_matrix_file(G, group_pairs, f'../results/shortest_path_no_{stop_id}_group_{group_id + 1}.csv')
+    create_adjacency_matrix_file(G, group_pairs, output_path)  # NOTE: Before f'../results/shortest_path_no_{stop_id}_group_{group_id + 1}.csv'
 
 
 if __name__ == '__main__':

@@ -1,10 +1,10 @@
+import argparse
 import pickle
 import os
 import networkx as nx
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
-from utils import timed
-import sys
+from utils.utils import timed
 import pandas as pd
 
 
@@ -70,23 +70,42 @@ def create_adjacency_matrix_file(G, sources, targets, file_path, num_paths=None)
     
 
 def main():     # NOTE: Run python script with -O flag to disable DEBUG features (such as timed decorator)
-    if not os.path.exists('graph.gpickle'):
+    parser = argparse.ArgumentParser(description='Computes a CSV file with an adjacency matrix of shortest paths and weights from all centroids to all centroids.')
+    parser.add_argument('graph_path', type=str, help='PATH to graph file')
+    parser.add_argument('--batch', type=int, nargs=2, metavar=('BATCHES', 'BATCH_NUM'), help='Number of batches and batch number (in this order)')
+    parser.add_argument('output_path', type=str, help='PATH to output file')
+    args = parser.parse_args()
+
+    graph_path = args.graph_path
+    output_path = args.output_path
+
+    if args.batch:
+        batches, batch_num = args.batch
+    else:
+        batches, batch_num = (1, 1)
+
+    if not os.path.exists(graph_path):
         print("Graph not found, please run generate_routes_graph.py first!")
         exit(1)
+
+    if batches < batch_num:
+        print("Number of batches must be higher than batch number.")
+        exit(1)
     
-    G = read_graph_pickle('graph.gpickle')
+    G = read_graph_pickle(graph_path)
     
     centroids = extract_centroids_from_graph(G) 
 
-    num_groups = int(sys.argv[1])
+    num_groups = int(batches)
     group_size = len(centroids) // num_groups
-    group_id = int(sys.argv[2]) - 1
+    group_id = int(batch_num) - 1
 
     start_idx = group_id * group_size
     end_idx = (group_id + 1) * group_size if group_id < num_groups - 1 else len(centroids)
     group_centroids = centroids[start_idx:end_idx]
 
-    create_adjacency_matrix_file(G, group_centroids, centroids, f'shortest_path_group_{group_id + 1}.csv', num_paths=20 if __debug__ else None)
+    # NOTE: Scripts must take into account output_filename to not overlap! f'shortest_path_group_{group_id + 1}.csv'
+    create_adjacency_matrix_file(G, group_centroids, centroids, output_path, num_paths=20 if __debug__ else None)
 
 
 if __name__ == '__main__':
