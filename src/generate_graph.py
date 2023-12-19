@@ -4,10 +4,7 @@ import networkx as nx
 import pickle
 import math
 import geopandas as gpd
-
-
-DEGREE_TO_METER = 111139
-MAX_WALKING_DISTANCE = 2000     # NOTE: In m
+from utils.constants import DEGREE_TO_METER, MAX_WALKING_DISTANCE
 
 
 def add_routes(graph, feed, weight_prop=0.05, shapes=False):
