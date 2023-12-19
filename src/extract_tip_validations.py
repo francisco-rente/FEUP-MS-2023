@@ -13,6 +13,7 @@ STCP_EXCEL_PATH = "../datasets/TIP_Validations/Porto Digital Rodov 2023"
 METRO_EXCEL_DF = "../results/metro_excel_dataframe.csv"
 STCP_EXCEL_DF = "../results/stcp_excel_dataframe.csv"
 RESULT_FILE = '../results/validation_per_section.csv'
+AVG_DISTANCE_TO_NODE_CSV = '../results/average_distance_to_node.csv'
 
 def read_excel_files(directory):
     dataframes = []
@@ -112,7 +113,18 @@ def main():
         # merge metro and stcp summing the validations per section
         print(">Merging Metro and STCP")
         df_merged = pd.concat([df_centroids_metro_vals, df_centroids_stcp_vals]).groupby(['section_id']).sum().reset_index()
+        
+        avg_distance_to_node = pd.read_csv(AVG_DISTANCE_TO_NODE_CSV)
+        avg_distance_to_node.rename(columns={'to': 'section_id'}, inplace=True)
+        df_merged = df_merged.merge(avg_distance_to_node, on='section_id', how='left')
+        df_merged['indicator'] = df_merged['validations'] * df_merged['weight']
         df_merged.to_csv(RESULT_FILE, index=False, header=True)
+        
+
+    else:
+        print(">Section Validations already calculated")
+        
+        
     
         
     
