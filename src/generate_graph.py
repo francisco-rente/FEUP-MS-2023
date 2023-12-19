@@ -1,3 +1,4 @@
+import argparse
 import partridge as ptg
 import networkx as nx
 import pickle
@@ -6,7 +7,6 @@ import geopandas as gpd
 
 
 DEGREE_TO_METER = 111139
-SECTIONS_GPKG = '../datasets/BGRI2021_1312.gpkg'
 MAX_WALKING_DISTANCE = 2000     # NOTE: In m
 
 
@@ -127,38 +127,60 @@ def calculate_distance_degree(from_pos, to_pos):
 
 
 def main():
-    # Load GTFS data into a feed
-    stcp_feed = ptg.load_feed('../datasets/gtfs-stcp')
-    mdp_feed = ptg.load_feed('../datasets/gtfs-mdp')
-    print(f'> Reading {SECTIONS_GPKG} file')
-    sections = load_centroids(SECTIONS_GPKG)
+    parser = argparse.ArgumentParser(description='Generates a graph with GTFS stops/routes and GPKG centroids, connects those in walking distance.')
+    parser.add_argument('--gtfs', type=str, nargs='+', help='PATH to one or more GTFS', required=True)
+    parser.add_argument('--wf', type=float, nargs='+', help='Weight factors corresponding to GTFS paths', required=True)
+    parser.add_argument('--shapes', type=bool, nargs='+', help='Use shapes from GTFS paths for more accurate distances', required=True)
+    parser.add_argument('--gpkg', type=str, nargs='+', help='PATH to one or more GPKG', required=True)
+    parser.add_argument('--out', type=str, help='PATH to output file', required=True)
+    args = parser.parse_args()
+
+    gtfs_paths = args.gtfs
+    weight_factors = args.wf
+    use_shapes = args.shapes
+    gpkg_paths = args.gpkg
+    outfile_path = args.out
+
+    if len(gtfs_paths) != len(weight_factors) != len(use_shapes):
+        parser.error("The number of GTFS paths, weight factors and shapes must be the same.")
 
     # Create a directed graph to represent the trips
     G = nx.DiGraph()
 
-    # Generate graph
-    print('################# STCP #################')
-    add_routes(G, stcp_feed, shapes=True)
-    print('################# MDP #################')
-    add_routes(G, mdp_feed, weight_prop=0.01)
-    print('################# SECTIONS #################')
-    add_centroids(G, sections)
+    for i, gtfs_path in enumerate(gtfs_paths):
+        # Load GTFS data into a feed
+        print(f'> Reading GTFS: {gtfs_path}')
+        feed = ptg.load_feed(gtfs_path)
+
+        # Generate graph
+        print(f'> Inserting routes from {gtfs_path}')
+        add_routes(G, feed, weight_prop=weight_factors[i], shapes=use_shapes[i])
+
+    for gpkg_path in gpkg_paths:
+        # Load GPKG
+        print(f'> Reading GPKG: {gpkg_path}')
+        sections = load_centroids(gpkg_path)
+
+        # Generate graph
+        print(f'> Inserting centroids from {gpkg_path}')
+        add_centroids(G, sections)
 
     print(f'> Connecting all nodes without connecting edges with weight=distance (max. walking distance is {MAX_WALKING_DISTANCE}m)')
     connect_nodes_without_edge(G, max_walking_distance=MAX_WALKING_DISTANCE)
 
+    # Check connectivity
     if nx.is_strongly_connected(G):
         print('> The graph is strongly connected')
     else:
         print("> WARNING: The graph isn't strongly connected!")
 
     # Save graph object to file 
-    with open('graph.gpickle', 'wb') as f:
+    with open(outfile_path, 'wb') as f:
         pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
 
-    with open('debug.log', 'w') as f:
-        for from_stop, to_stop, data in G.edges(data=True):
-            f.write(f'{from_stop}-{to_stop}, {data}\n')
+    # with open('debug.log', 'w') as f:
+    #     for from_stop, to_stop, data in G.edges(data=True):
+    #         f.write(f'{from_stop}-{to_stop}, {data}\n')
 
 
 if __name__ == '__main__':

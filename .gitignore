@@ -175,8 +175,9 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-*.gpickle
+results/*
+!results/shortest_paths_raw.csv
+!results/shortest_paths_without_5726.csv
+
 .DS_Store
 *.log
-src/*.csv
-debug* 
