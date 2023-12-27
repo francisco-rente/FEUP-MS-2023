@@ -97,7 +97,7 @@ def main():
         # stcp
 
         print(">Reading STCP TIP files")
-        if not os.path.exists(STCP_EXCEL_PATH):
+        if not os.path.exists(STCP_EXCEL_DF):
             df_stcp_excel = read_excel_files(STCP_EXCEL_PATH)
             df_stcp_excel.rename(columns={'Paragem' : 'stop_name'}, inplace=True)
             df_stcp_excel.to_csv(STCP_EXCEL_DF, index=False, header=True) #TODO: do after name matching with stops.txt? 
@@ -113,10 +113,10 @@ def main():
         # merge metro and stcp summing the validations per section
         print(">Merging Metro and STCP")
         df_merged = pd.concat([df_centroids_metro_vals, df_centroids_stcp_vals]).groupby(['section_id']).sum().reset_index()
-        
         avg_distance_to_node = pd.read_csv(AVG_DISTANCE_TO_NODE_CSV)
-        avg_distance_to_node.rename(columns={'to': 'section_id'}, inplace=True)
-        df_merged = df_merged.merge(avg_distance_to_node, on='section_id', how='left')
+        avg_distance_to_node.rename(columns={'to': 'section_id'}, inplace=True)  
+        df_merged = pd.concat([df_merged, avg_distance_to_node], axis=1)
+        #df_merged = df_merged.merge(avg_distance_to_node, on='section_id', how='left')
         df_merged['indicator'] = df_merged['validations'] * df_merged['weight']
         df_merged.to_csv(RESULT_FILE, index=False, header=True)
         
