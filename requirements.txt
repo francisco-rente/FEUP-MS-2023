@@ -9,6 +9,7 @@ cligj==0.7.2
 contextily==1.4.0
 contourpy==1.2.0
 cycler==0.12.1
+et-xmlfile==1.1.0
 fiona==1.9.5
 folium==0.15.1
 fonttools==4.46.0
@@ -27,6 +28,7 @@ matplotlib==3.8.2
 mercantile==1.2.1
 networkx==3.2.1
 numpy==1.26.2
+openpyxl==3.1.2
 packaging==23.2
 pandas==2.1.3
 partridge @ git+https://github.com/remix/partridge.git@c3afb135b42401678bc894bdfef729699f65dd7c

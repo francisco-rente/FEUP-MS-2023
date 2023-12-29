@@ -11,7 +11,7 @@ results/graph.gpickle: venv/bin/activate src/generate_graph.py
 view_routes: venv/bin/activate results/graph.gpickle src/view_routes.py
 	venv/bin/python3 src/view_routes.py results/graph.gpickle
 
-view_metro: venv/bin/activate results/graph.gpickle src/view_routes.py
+view_mdp: venv/bin/activate results/graph.gpickle src/view_routes.py
 	venv/bin/python3 src/view_routes.py --routes A B Bexp C D E F -- results/graph.gpickle
 
 # args: batches, batch_num
@@ -38,3 +38,6 @@ compute_statistics: venv/bin/activate results/graph.gpickle results/shortest_pat
 
 compute_stops_count: venv/bin/activate results/shortest_paths_raw.csv src/evaluate/compute_stops_count.py
 	venv/bin/python3 src/evaluate/compute_stops_count.py results/shortest_paths_raw.csv results/stops_count.csv
+
+results/average_weight_to_node.csv: venv/bin/activate results/shortest_paths_raw.csv
+	venv/bin/python3 src/average_weight_to_node.py results/shortest_paths_raw.csv results/average_weight_to_node.csv
