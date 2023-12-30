@@ -39,5 +39,9 @@ compute_statistics: venv/bin/activate results/graph.gpickle results/shortest_pat
 compute_stops_count: venv/bin/activate results/shortest_paths_raw.csv src/evaluate/compute_stops_count.py
 	venv/bin/python3 src/evaluate/compute_stops_count.py results/shortest_paths_raw.csv results/stops_count.csv
 
-results/average_weight_to_node.csv: venv/bin/activate results/shortest_paths_raw.csv
+results/average_weight_to_node.csv: venv/bin/activate results/shortest_paths_raw.csv src/average_weight_to_node.py
 	venv/bin/python3 src/average_weight_to_node.py results/shortest_paths_raw.csv results/average_weight_to_node.csv
+
+extract_validations: venv/bin/activate datasets/TIP_Validations/Porto\ Digital\ Ferrov\ 2023 datasets/TIP_Validations/Porto\ Digital\ Rodov\ 2023 src/extract_validations.py
+	venv/bin/python3 src/extract_validations.py 'datasets/TIP_Validations/Porto Digital Ferrov 2023' Est/Op Validações results/mdp_validations.csv
+	venv/bin/python3 src/extract_validations.py 'datasets/TIP_Validations/Porto Digital Rodov 2023' Paragem Validações results/stcp_validations.csv
