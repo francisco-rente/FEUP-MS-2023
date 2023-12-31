@@ -1,6 +1,7 @@
 import argparse
 import os
 import pandas as pd
+from unidecode import unidecode
 
 
 def read_excel_files(excel_dir_path):
@@ -44,6 +45,9 @@ def main():
     df[validations_col] = pd.to_numeric(df['validations'], errors='coerce')
     df['stop_name'] = df['stop_name'].str.strip()
     df = df.dropna(subset=['stop_name', 'validations'])
+
+    # Apply unidecode to stop names and remove unnecessary white spaces in the middle
+    df['stop_name'] = df['stop_name'].apply(lambda x: ' '.join(unidecode(x).split()))
 
     # Sum validations for same stop name
     df = df.groupby('stop_name')['validations'].sum().reset_index()

@@ -178,6 +178,7 @@ pyrightconfig.json
 results/*
 !results/shortest_paths_raw.csv
 !results/shortest_paths_without_5726.csv
+!results/*_validations.csv
 
 .DS_Store
 *.log
