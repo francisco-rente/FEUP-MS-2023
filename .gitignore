@@ -179,6 +179,7 @@ results/*
 !results/shortest_paths_raw.csv
 !results/shortest_paths_without_5726.csv
 !results/*_validations.csv
+!results/validations_per_section.csv
 
 .DS_Store
 *.log
