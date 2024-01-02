@@ -33,12 +33,12 @@ def group_validations_centroids(sections_df, validations_df, stops_df):
                 validations_count += stop_row['validations'] / stop_row['count']
 
         # Check adjacent sections
-        adjacent_sections = sections_df[sections_df.geometry.touches(section_row['geometry'])]
-        for _, adjacent_section_row in adjacent_sections.iterrows():
-            for _, stop_row in stops_df.iterrows():
-                stop = Point(stop_row['stop_lon'], stop_row['stop_lat'])
-                if stop.within(adjacent_section_row['geometry']):
-                    validations_count += stop_row['validations'] / stop_row['count']
+        # adjacent_sections = sections_df[sections_df.geometry.touches(section_row['geometry'])]
+        # for _, adjacent_section_row in adjacent_sections.iterrows():
+        #     for _, stop_row in stops_df.iterrows():
+        #         stop = Point(stop_row['stop_lon'], stop_row['stop_lat'])
+        #         if stop.within(adjacent_section_row['geometry']):
+        #             validations_count += stop_row['validations'] / stop_row['count']
 
         centroid_validations_df = centroid_validations_df._append({'section_id': region_id, 'validations': validations_count}, ignore_index=True)
     

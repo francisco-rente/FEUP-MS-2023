@@ -42,6 +42,9 @@ compute_stops_count: venv/bin/activate results/shortest_paths_raw.csv src/evalua
 results/average_weight_to_section.csv: venv/bin/activate results/shortest_paths_raw.csv src/average_weight_to_section.py
 	venv/bin/python3 src/average_weight_to_section.py results/shortest_paths_raw.csv results/average_weight_to_section.csv
 
+results/average_weight_to_section_without_trindade.csv: venv/bin/activate results/shortest_paths_without_5726.csv src/average_weight_to_section.py
+	venv/bin/python3 src/average_weight_to_section.py results/shortest_paths_without_5726.csv results/average_weight_to_section_without_trindade.csv
+
 extract_validations: venv/bin/activate datasets/TIP_Validations/Porto\ Digital\ Ferrov\ 2023 datasets/TIP_Validations/Porto\ Digital\ Rodov\ 2023 src/extract_validations.py
 	venv/bin/python3 src/extract_validations.py 'datasets/TIP_Validations/Porto Digital Ferrov 2023' Est/Op Validações results/mdp_validations.csv
 	venv/bin/python3 src/extract_validations.py 'datasets/TIP_Validations/Porto Digital Rodov 2023' Paragem Validações results/stcp_validations.csv
@@ -53,5 +56,21 @@ results/validations_per_section.csv: venv/bin/activate results/mdp_validations.c
 	--gpkg datasets/BGRI2021_1312.gpkg \
 	results/validations_per_section.csv
 
+results/validations_per_section_without_trindade.csv: venv/bin/activate results/mdp_validations_without_trindade.csv results/stcp_validations.csv datasets/gtfs-mdp datasets/gtfs-stcp datasets/BGRI2021_1312.gpkg src/compute_validations_per_section.py
+	venv/bin/python3 src/compute_validations_per_section.py \
+	--validations results/mdp_validations_without_trindade.csv results/stcp_validations.csv \
+	--gtfs datasets/gtfs-mdp datasets/gtfs-stcp \
+	--gpkg datasets/BGRI2021_1312.gpkg \
+	results/validations_per_section_without_trindade.csv
+
+
 compute_indicator: venv/bin/activate results/validations_per_section.csv results/average_weight_to_section.csv src/compute_indicator.py
 	venv/bin/python3 src/compute_indicator.py results/validations_per_section.csv results/average_weight_to_section.csv results/indicator.csv
+
+compute_indicator_without_trindade: venv/bin/activate results/validations_per_section_without_trindade.csv results/average_weight_to_section_without_trindade.csv src/compute_indicator.py
+	venv/bin/python3 src/compute_indicator.py results/validations_per_section_without_trindade.csv results/average_weight_to_section_without_trindade.csv results/indicator_without_trindade.csv
+
+
+compute_average_weight: venv/bin/activate results/shortest_paths_raw.csv results/shortest_paths_without_5726.csv src/evaluate/compute_average_weight.py
+	venv/bin/python3 src/evaluate/compute_average_weight.py results/shortest_paths_raw.csv
+	venv/bin/python3 src/evaluate/compute_average_weight.py results/shortest_paths_without_5726.csv
