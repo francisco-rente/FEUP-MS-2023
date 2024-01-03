@@ -22,11 +22,18 @@ def main():
     for path in df['path']:
         for stop in path.split('-')[1:-1]:
             stop_count[stop] = stop_count.get(stop, 0) + 1
+
+    result_df = pd.DataFrame(list(stop_count.items()), columns=['stop_id', 'count'])
+
+    # min max scaler
+    min_count = result_df['count'].min()
+    delta_count = result_df['count'].max() - min_count
+    result_df['importance'] = (result_df['count'] - min_count) / (delta_count)
+
+    # Sort by count
+    result_df = result_df.sort_values(by='count', ascending=False)
     
-    with open(output_path, 'w') as f:
-        f.write('stop,count\n')
-        for key, value in stop_count.items():
-            f.write(f'{key},{value}\n')
+    result_df.to_csv(output_path, index=False)
 
 
 if __name__ == '__main__':
