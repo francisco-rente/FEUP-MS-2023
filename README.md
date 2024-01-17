@@ -2,6 +2,7 @@
 
 Done in the context of the Modelling and Simulation curricular unit, FEUP 2023/24.
 
+[Paper](./doc/G01_final_report.pdf)
 
 ## Abstract 
 
@@ -10,13 +11,9 @@ This study introduces a sophisticated model for Porto's public transportation, u
 
 ## Authors 
 
-Adriano Soares - up201904873@edu.fe.up.pt
-António Ribeiro - up201906761@edu.fe.up.pt
-Pedro Pinheiro - up201906788@edu.fe.up.pt
-
-
-
-
+- Adriano Soares (up201904873@edu.fe.up.pt)
+- António Ribeiro (up201906761@edu.fe.up.pt)
+- Pedro Pinheiro (up201906788@edu.fe.up.pt)
 
 
 
