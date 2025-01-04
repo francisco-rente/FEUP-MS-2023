@@ -16,4 +16,6 @@ This study introduces a sophisticated model for Porto's public transportation, u
 - Pedro Pinheiro (up201906788@edu.fe.up.pt)
 
 
+## Illustrative pictures 
+![image](https://github.com/user-attachments/assets/dc8aa2f3-d5ee-46bd-aad7-ad91871401d3)
 
